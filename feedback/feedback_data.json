@@ -1,0 +1,9 @@
+[
+  
+  {
+    "timestamp": "2025-03-20 23:23:19",
+    "query": "坂头2018年1月AQI平均值",
+    "sql": "SELECT AVG(CAST(AQI AS DECIMAL(10, 2))) AS avg_aqi\nFROM envom_origin\nWHERE CDMC = '坂头'  AND CYRQ LIKE '2018-01%';",
+    "rating": 5
+  }
+]
