@@ -3,6 +3,8 @@ import aiohttp
 from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.pool import QueuePool
 from ..context.query_context import QueryContext
+import json
+from pathlib import Path
 
 class QueryModel:
     def __init__(self, db_url: str, api_key: str, api_url: str):
@@ -21,7 +23,22 @@ class QueryModel:
         # 在初始化时获取 schema 信息并缓存
         print("开始加载数据库 Schema 信息...")
         self._schema_info = self._get_schema_info()
+        self._examples = self._load_examples()
         print(f"Schema 信息加载完成，长度: {len(self._schema_info)}")
+
+    def _load_examples(self) -> str:
+        try:
+            feedback_path = Path(__file__).parent.parent.parent / 'feedback' / 'feedback_data.json'
+            print(f"正在加载示例数据: {feedback_path}")
+            with open(feedback_path, 'r', encoding='utf-8') as f:
+                examples = json.load(f)
+                example_text = []
+                for example in examples:
+                    example_text.append(f"User Query: {example['query']}\nSQL: {example['sql']}")
+                return "\n\n".join(example_text)
+        except Exception as e:
+            print(f"加载示例数据失败: {str(e)}")
+            return ""
 
     def _get_schema_info(self) -> str:
         print("正在获取数据库表结构...")
@@ -89,7 +106,12 @@ class QueryModel:
                     "messages": [
                         {
                             "role": "system",
-                            "content": "You are a SQL expert. Generate SQL query based on the schema and user query. Return ONLY the SQL query without any explanation or markdown formatting."
+                            "content": f"""You are a SQL expert. Generate SQL query based on the schema and user query.
+
+Examples:
+{self._examples}
+
+Return ONLY the SQL query without any explanation or markdown formatting."""
                         },
                         {
                             "role": "user",
