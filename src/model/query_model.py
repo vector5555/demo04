@@ -5,6 +5,7 @@ from sqlalchemy.pool import QueuePool
 from ..context.query_context import QueryContext
 import json
 from pathlib import Path
+from ..vector_store.feedback_store import FeedbackVectorStore
 
 class QueryModel:
     def __init__(self, db_url: str, api_key: str, api_url: str):
@@ -25,6 +26,8 @@ class QueryModel:
         self._schema_info = self._get_schema_info()
         self._examples = self._load_examples()
         print(f"Schema 信息加载完成，长度: {len(self._schema_info)}")
+        self.vector_store = FeedbackVectorStore()
+        print("向量数据库加载完成")
 
     def _load_examples(self) -> str:
         try:
@@ -81,8 +84,17 @@ class QueryModel:
         try:
             print("\n=== 开始生成 SQL ===")
             print(f"接收到的查询: {query}")
-            print(f"Context ID: {context_id}")
-            print(f"API URL: {self.api_url}")
+            
+            # 获取相似的示例
+            similar_examples = self.vector_store.find_similar_examples(query)
+            print(f"找到 {len(similar_examples)} 个相似示例")
+            
+            examples_text = []
+            for example in similar_examples:
+                examples_text.append(f"User Query: {example['query']}\nSQL: {example['sql']}")
+            examples_prompt = "\n\n".join(examples_text)
+            
+            print(f"找到 {len(similar_examples)} 个相似示例")
             
             context = self.context_manager.get_context(context_id)
             history = context['history'] if context else []
@@ -108,8 +120,8 @@ class QueryModel:
                             "role": "system",
                             "content": f"""You are a SQL expert. Generate SQL query based on the schema and user query.
 
-Examples:
-{self._examples}
+Similar Examples:
+{examples_prompt}
 
 Return ONLY the SQL query without any explanation or markdown formatting."""
                         },
@@ -155,15 +167,32 @@ Return ONLY the SQL query without any explanation or markdown formatting."""
     async def execute_query(self, sql: str) -> Any:
         try:
             with self.engine.connect() as connection:
-                result = connection.execute(text(sql))
-                columns = result.keys()
-                return [dict(zip(columns, row)) for row in result.fetchall()]
+                # 开始事务
+                with connection.begin():
+                    result = connection.execute(text(sql))
+                    columns = result.keys()
+                    return [dict(zip(columns, row)) for row in result.fetchall()]
         except Exception as e:
             print(f"Database error: {str(e)}")
             # 如果是连接错误，尝试重新连接
             if "MySQL server has gone away" in str(e):
                 with self.engine.connect() as connection:
-                    result = connection.execute(text(sql))
-                    columns = result.keys()
-                    return [dict(zip(columns, row)) for row in result.fetchall()]
+                    with connection.begin():
+                        result = connection.execute(text(sql))
+                        columns = result.keys()
+                        return [dict(zip(columns, row)) for row in result.fetchall()]
             raise Exception(f"SQL执行错误: {str(e)}")
+
+    async def execute_edited_query(self, original_sql: str, edited_sql: str) -> Any:
+        """执行编辑后的 SQL 查询"""
+        try:
+            print(f"\n=== 执行编辑后的 SQL ===")
+            print(f"编辑后的 SQL: {edited_sql}")
+            
+            # 直接执行编辑后的 SQL
+            result = await self.execute_query(edited_sql)
+            return result
+            
+        except Exception as e:
+            print(f"执行编辑后的 SQL 失败: {str(e)}")
+            raise Exception(f"执行失败: {str(e)}")

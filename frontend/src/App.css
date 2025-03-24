@@ -56,9 +56,12 @@
   border-radius: 4px;
 }
 
+.edited-sql {
+  border-left: 3px solid #1890ff;  /* 添加蓝色边框标记编辑后的 SQL */
+}
+
 .sql-card {
-  margin-bottom: 12px;
-  position: relative;
+  margin-bottom: 16px;
 }
 
 .sql-card .ant-card-extra {

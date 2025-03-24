@@ -1,9 +1,74 @@
 [
-  
   {
     "timestamp": "2025-03-20 23:23:19",
     "query": "坂头2018年1月AQI平均值",
     "sql": "SELECT AVG(CAST(AQI AS DECIMAL(10, 2))) AS avg_aqi\nFROM envom_origin\nWHERE CDMC = '坂头'  AND CYRQ LIKE '2018-01%';",
+    "rating": 5
+  },
+  {
+    "timestamp": "2025-03-21 01:38:08",
+    "query": "坂头2018年1月AQI均值",
+    "sql": "SELECT AVG(CAST(AQI AS DECIMAL(10, 2))) AS avg_aqi\nFROM envom_origin\nWHERE CDMC = '坂头' AND CYRQ LIKE '2018-01%';",
+    "rating": 5
+  },
+  {
+    "timestamp": "2025-03-21 11:06:04",
+    "query": "查询坂头2018年1月的六项污染物浓度均值",
+    "sql": "SELECT AVG(CAST(SO2 AS DECIMAL(10, 2))) AS avg_so2, AVG(CAST(NO2 AS DECIMAL(10, 2))) AS avg_no2, AVG(CAST(PM AS DECIMAL(10, 2))) AS avg_pm, AVG(CAST(CO AS DECIMAL(10, 2))) AS avg_co, AVG(CAST(O3 AS DECIMAL(10, 2))) AS avg_o3, AVG(CAST(PM25 AS DECIMAL(10, 2))) AS avg_pm25 FROM envom_origin WHERE CDMC = '坂头' AND CYRQ LIKE '2018-01%';",
+    "rating": 5
+  },
+  {
+    "timestamp": "2025-03-22 22:24:05",
+    "query": "列出所有的监测站点",
+    "sql": "SELECT DISTINCT CDMC FROM envom_origin;",
+    "rating": 5
+  },
+  {
+    "timestamp": "2025-03-22 22:30:46",
+    "query": "列出所有的国控站点",
+    "sql": "SELECT DISTINCT CDMC FROM envom_origin WHERE KZJB = '国控';",
+    "rating": 5
+  },
+  {
+    "timestamp": "2025-03-22 22:34:09",
+    "query": "列出所有的市控站点",
+    "sql": "SELECT DISTINCT CDMC FROM envom_origin WHERE KZJB = '市控';",
+    "rating": 5
+  },
+  {
+    "timestamp": "2025-03-22 22:34:50",
+    "query": "一共有多少个国控站点？",
+    "sql": "SELECT COUNT(DISTINCT CDMC) AS num_national_sites FROM envom_origin WHERE KZJB = '国控';",
+    "rating": 5
+  },
+  {
+    "timestamp": "2025-03-22 22:37:54",
+    "query": "一共有多少个国控站点，并列出国控站点清单。",
+    "sql": "SELECT COUNT( DISTINCT CDMC) AS total_guokong_sites, CDMC AS guokong_site_list FROM envom_origin WHERE KZJB = '国控' GROUP BY CDMC;",
+    "rating": 5
+  },
+  {
+    "timestamp": "2025-03-23 01:00:49",
+    "query": "全市一共有多少个监测站",
+    "sql": "SELECT COUNT(DISTINCT CDMC) AS total_monitoring_stations FROM envom_origin;",
+    "rating": 5
+  },
+  {
+    "timestamp": "2025-03-24 14:35:43",
+    "query": null,
+    "sql": "SELECT COUNT(DISTINCT CDMC) AS num_monitoring_stations FROM envom_origin WHERE JCQ LIKE '%集美%';",
+    "rating": 5
+  },
+  {
+    "timestamp": "2025-03-24 14:48:21",
+    "query": "[编辑] undefined",
+    "sql": "SELECT COUNT(DISTINCT CDMC) AS num_monitoring_sites FROM envom_origin WHERE JCQ LIKE '%集美%';",
+    "rating": 5
+  },
+  {
+    "timestamp": "2025-03-24 15:02:46",
+    "query": "[编辑] 集美有几个监测站点？",
+    "sql": "SELECT COUNT(DISTINCT CDMC) AS num_monitoring_sites FROM envom_origin WHERE JCQ LIKE '%集美%';",
     "rating": 5
   }
 ]

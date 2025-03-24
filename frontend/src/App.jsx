@@ -46,8 +46,8 @@ function App() {
     
     setLoading(true);
     try {
-      console.log('发送查询请求:', value);  // 添加日志
-      const response = await axios.post('http://localhost:8000/query', {
+      console.log('发送查询请求:', value);
+      const response = await axios.post('http://localhost:8000/query_nl', {  // 修改为 query_nl
         query_text: value,
         context_id: contextId
       });
@@ -86,21 +86,25 @@ function App() {
   const handleExecuteSQL = async () => {
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost:8000/query', {
-        query_text: currentQuery,
-        sql: currentSQL,
-        context_id: contextId
+      const response = await axios.post('http://localhost:8000/execute_edited', {
+        original_sql: currentSQL,
+        edited_sql: currentSQL,
       });
       
+      // 创建新的消息，标记为人工编辑
       const systemMessage = {
         type: 'system',
         sql: currentSQL,
-        result: response.data.result,
+        result: response.data.data,
         error: null,
         timestamp: new Date().toLocaleTimeString(),
-        rated: false
+        rated: false,
+        isEdited: true,  // 标记为编辑后的 SQL
+        editTime: new Date().toLocaleTimeString()  // 记录编辑时间
       };
-      setMessages(prev => [...prev.slice(0, -1), systemMessage]);
+      
+      // 添加新消息而不是覆盖
+      setMessages(prev => [...prev, systemMessage]);
       setEditModalVisible(false);
     } catch (error) {
       const errorMessage = {
@@ -109,15 +113,18 @@ function App() {
         result: [],
         error: error.response?.data?.detail || '执行失败，请检查 SQL 语句',
         timestamp: new Date().toLocaleTimeString(),
-        rated: false
+        rated: false,
+        isEdited: true,
+        editTime: new Date().toLocaleTimeString()
       };
-      setMessages(prev => [...prev.slice(0, -1), errorMessage]);
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
-      setLoading(false);  // 确保在所有操作完成后关闭加载状态
-      setEditModalVisible(false);  // 关闭编辑模态框
+      setLoading(false);
+      setEditModalVisible(false);
     }
   };
 
+  // 修改渲染逻辑，在 renderMessage 函数中添加编辑标记
   const renderMessage = (msg, index) => {
     if (msg.type === 'user') {
       return (
@@ -128,24 +135,28 @@ function App() {
       );
     }
     
-    // 系统消息渲染
     return (
       <div className="system-message">
         <Card 
           size="small" 
-          title="生成的 SQL" 
-          className="sql-card"
+          title={msg.isEdited ? "编辑后的 SQL" : "AI 生成的 SQL"}  // 区分标题
+          className={`sql-card ${msg.isEdited ? 'edited-sql' : ''}`}  // 添加样式类
           extra={
-            <Button 
-              icon={<EditOutlined />} 
-              size="small"
-              onClick={() => handleSQLEdit(msg.sql, messages[index - 1]?.content)}
-            >
-              编辑
-            </Button>
+            !msg.isEdited && (  // 只在 AI 生成的 SQL 上显示编辑按钮
+              <Button 
+                icon={<EditOutlined />} 
+                size="small"
+                onClick={() => handleSQLEdit(msg.sql, messages[index - 1]?.content)}
+              >
+                编辑
+              </Button>
+            )
           }
         >
           <pre>{msg.sql}</pre>
+          {msg.isEdited && (
+            <Text type="secondary">编辑时间: {msg.editTime}</Text>
+          )}
         </Card>
         
         {msg.error ? (
@@ -199,11 +210,31 @@ function App() {
     
     if (rating >= 4) {
       try {
+        // 确保有查询内容
+        let queryText;
+        if (currentMessage.isEdited) {
+          // 查找最近的用户查询消息
+          for (let i = messageIndex - 1; i >= 0; i--) {
+            if (messages[i].type === 'user') {
+              queryText = `[编辑] ${messages[i].content}`;
+              break;
+            }
+          }
+        } else {
+          queryText = userMessage?.content;
+        }
+
+        // 如果还是没有找到查询内容，使用默认值
+        if (!queryText) {
+          queryText = '[编辑] 手动编辑的SQL查询';
+        }
+
         await axios.post('http://localhost:8000/feedback', {
-          query: userMessage.content,  // 从用户消息中获取查询内容
+          query: queryText,
           sql: currentMessage.sql,
           rating: rating
         });
+        
         const updatedMessages = [...messages];
         updatedMessages[messageIndex] = {
           ...currentMessage,
@@ -251,7 +282,7 @@ function App() {
         open={editModalVisible}
         onOk={handleExecuteSQL}
         onCancel={() => {
-          setEditModalVisible(false);
+           setEditModalVisible(false);
           setCurrentSQL('');
           setCurrentQuery('');
         }}
