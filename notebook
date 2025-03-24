@@ -1,4 +1,4 @@
 进入虚拟Python环境
-venv/Scripts/activat
+venv/Scripts/activate
 启动python后台服务
 python -m uvicorn src.main:app --reload --port 8000
