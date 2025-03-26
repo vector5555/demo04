@@ -56,8 +56,55 @@
   border-radius: 4px;
 }
 
-.edited-sql {
-  border-left: 3px solid #1890ff;  /* 添加蓝色边框标记编辑后的 SQL */
+.visualization-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.data-stats {
+  display: flex;
+  gap: 24px;
+  padding: 8px;
+  background: #f5f5f5;
+  border-radius: 4px;
+}
+
+.data-table-container {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+}
+
+.data-table-container table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table-container th,
+.data-table-container td {
+  padding: 8px;
+  border: 1px solid #e8e8e8;
+}
+
+.data-table-container th {
+  background: #fafafa;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.chart-container {
+  height: 400px;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  padding: 16px;
+}
+
+.edited-sql .visualization-container {
+  border-left: 3px solid #1890ff;
 }
 
 .sql-card {
@@ -99,4 +146,71 @@ pre {
 .loading-container {
   text-align: center;
   padding: 24px;
+}
+.result-section {
+  margin: 16px 0;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+}
+
+.data-stats {
+  padding: 12px;
+  background: #fafafa;
+  border-bottom: 1px solid #e8e8e8;
+  display: flex;
+  gap: 24px;
+}
+
+.table-wrapper {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.table-wrapper table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-wrapper th,
+.table-wrapper td {
+  padding: 8px;
+  border: 1px solid #e8e8e8;
+  white-space: nowrap;
+}
+
+.table-wrapper th {
+  background: #fafafa;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.index-column {
+  width: 60px;
+  text-align: center;
+  background: #fafafa;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+
+thead .index-column {
+  z-index: 3;
+}
+
+.system-message .ant-collapse {
+  margin-bottom: 16px;
+  background: #fff;
+}
+
+.system-message .ant-collapse-header {
+  font-weight: 500;
+}
+
+.system-message .ant-collapse-content-box {
+  padding: 16px !important;
+}
+
+.system-message .ant-collapse + .ant-collapse {
+  margin-top: 16px;
 }
