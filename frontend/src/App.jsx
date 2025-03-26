@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { Input, Card, Space, message, List, Typography, Modal, Rate, Button, Alert, Spin } from 'antd';
-import { EditOutlined } from '@ant-design/icons';
+import { Card, Space, message, Modal, Input, Button, Typography, Rate } from 'antd';  // 添加缺失的组件
+import { EditOutlined } from '@ant-design/icons';  // 添加图标
 import axios from 'axios';
 import './App.css';
 
-const { Search } = Input;
-const { Text } = Typography;
+const { Text } = Typography;  // 添加 Text 组件引用
+
+import QueryInput from './components/QueryInput';
+import MessageList from './components/MessageList';
+import { detectChartType } from './utils/chartSelector';
 
 function App() {
   const [loading, setLoading] = useState(false);
@@ -63,8 +66,9 @@ function App() {
         type: 'system',
         sql: response.data.sql,
         result: response.data.result,
-        error: response.data.error,  // 添加错误字段
-        timestamp: new Date().toLocaleTimeString()
+        error: response.data.error,
+        timestamp: new Date().toLocaleTimeString(),
+        rated: false  // 添加 rated 字段
       };
       setMessages(prev => [...prev, systemMessage]);
       
@@ -75,7 +79,8 @@ function App() {
         sql: error.response?.data?.sql || '未能生成 SQL',
         result: [],
         error: error.response?.data?.detail || '查询失败，请重试',
-        timestamp: new Date().toLocaleTimeString()
+        timestamp: new Date().toLocaleTimeString(),
+        rated: false  // 添加 rated 字段
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -95,15 +100,14 @@ function App() {
       const systemMessage = {
         type: 'system',
         sql: currentSQL,
-        result: response.data.data,
+        result: response.data.data || [],
         error: null,
         timestamp: new Date().toLocaleTimeString(),
         rated: false,
-        isEdited: true,  // 标记为编辑后的 SQL
-        editTime: new Date().toLocaleTimeString()  // 记录编辑时间
+        isEdited: true,
+        editTime: new Date().toLocaleTimeString()
       };
       
-      // 添加新消息而不是覆盖
       setMessages(prev => [...prev, systemMessage]);
       setEditModalVisible(false);
     } catch (error) {
@@ -118,94 +122,15 @@ function App() {
         editTime: new Date().toLocaleTimeString()
       };
       setMessages(prev => [...prev, errorMessage]);
+      message.error('SQL 执行出错');
     } finally {
       setLoading(false);
       setEditModalVisible(false);
     }
   };
 
-  // 修改渲染逻辑，在 renderMessage 函数中添加编辑标记
-  const renderMessage = (msg, index) => {
-    if (msg.type === 'user') {
-      return (
-        <div className="user-message">
-          <Text>{msg.content}</Text>
-          <Text type="secondary" className="message-time">{msg.timestamp}</Text>
-        </div>
-      );
-    }
-    
-    return (
-      <div className="system-message">
-        <Card 
-          size="small" 
-          title={msg.isEdited ? "编辑后的 SQL" : "AI 生成的 SQL"}  // 区分标题
-          className={`sql-card ${msg.isEdited ? 'edited-sql' : ''}`}  // 添加样式类
-          extra={
-            !msg.isEdited && (  // 只在 AI 生成的 SQL 上显示编辑按钮
-              <Button 
-                icon={<EditOutlined />} 
-                size="small"
-                onClick={() => handleSQLEdit(msg.sql, messages[index - 1]?.content)}
-              >
-                编辑
-              </Button>
-            )
-          }
-        >
-          <pre>{msg.sql}</pre>
-          {msg.isEdited && (
-            <Text type="secondary">编辑时间: {msg.editTime}</Text>
-          )}
-        </Card>
-        
-        {msg.error ? (
-          <Alert
-            message="执行错误"
-            description={msg.error}
-            type="error"
-            showIcon
-          />
-        ) : (
-          msg.result && Array.isArray(msg.result) && msg.result.length > 0 && (
-            <>
-              <div className="result-table">
-                <table>
-                  <thead>
-                    <tr>
-                      {Object.keys(msg.result[0]).map(key => (
-                        <th key={key}>{key}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {msg.result.map((row, idx) => (
-                      <tr key={idx}>
-                        {Object.values(row).map((value, i) => (
-                          <td key={i}>{value}</td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {!msg.rated && (
-                <div className="feedback">
-                  <Text>这个查询结果符合你的预期吗？</Text>
-                  <Rate onChange={(value) => handleRate(index, value)} />
-                </div>
-              )}
-            </>
-          )
-        )}
-        <Text type="secondary" className="message-time">{msg.timestamp}</Text>
-      </div>
-    );
-  };
-
   const handleRate = async (messageIndex, rating) => {
     const currentMessage = messages[messageIndex];
-    // 获取对应的用户查询消息
     const userMessage = messages[messageIndex - 1];
     
     if (rating >= 4) {
@@ -231,7 +156,7 @@ function App() {
 
         await axios.post('http://localhost:8000/feedback', {
           query: queryText,
-          sql: currentMessage.sql,
+          sql: currentMessage.sql.replace(/\n/g, ' '), // 移除 SQL 中的换行符
           rating: rating
         });
         
@@ -252,28 +177,16 @@ function App() {
     <div className="app-container">
       <Card title="自然语言数据库查询" className="chat-card">
         <Space direction="vertical" style={{ width: '100%' }}>
-          <div className="messages-container">
-            <List
-              dataSource={messages}
-              renderItem={(item, index) => renderMessage(item, index)}
-              locale={{ emptyText: '开始你的第一次查询吧！' }}
-            />
-            {loading && (
-              <div className="loading-container">
-                <Spin tip="正在查询..." />
-              </div>
-            )}
-          </div>
-          
-          <div className="input-container">
-            <Search
-              placeholder="请输入自然语言查询，例如：查询所有监测站点的数据"
-              enterButton="发送"
-              size="large"
-              loading={loading}
-              onSearch={handleSearch}
-            />
-          </div>
+          <MessageList 
+            messages={messages}
+            loading={loading}
+            onEdit={handleSQLEdit}
+            onRate={handleRate}
+          />
+          <QueryInput 
+            loading={loading}
+            onSearch={handleSearch}
+          />
         </Space>
       </Card>
 
@@ -282,7 +195,7 @@ function App() {
         open={editModalVisible}
         onOk={handleExecuteSQL}
         onCancel={() => {
-           setEditModalVisible(false);
+          setEditModalVisible(false);
           setCurrentSQL('');
           setCurrentQuery('');
         }}
