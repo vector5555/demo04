@@ -1,19 +1,8 @@
 import React from 'react';
-import { List, Spin, Button } from 'antd';
-import { LogoutOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
-import Cookies from 'js-cookie';
+import { List, Spin } from 'antd';
 import MessageItem from './MessageItem';
-import '../styles/Message.css';  // 添加这行
 
 function MessageList({ messages, loading, onEdit, onRate }) {
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    Cookies.remove('token');
-    navigate('/login');
-  };
-
   return (
     <div className="messages-container">
       <List

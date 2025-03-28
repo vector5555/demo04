@@ -64,24 +64,27 @@ function Dashboard() {
         context_id: contextId
       });
       
-      if (!contextId) {
-        setContextId(response.data.context_id);
-      }
-      
+      // 修改这里：直接使用 response 而不是 response.data
       const systemMessage = {
         type: 'system',
-        sql: response.data.sql,
-        result: response.data.result,
-        error: response.data.error,
+        content: value,
+        sql: response.sql,
+        result: response.result,
+        error: null,
         timestamp: new Date().toLocaleTimeString(),
         rated: false
       };
       setMessages(prev => [...prev, systemMessage]);
       
+      if (!contextId && response.context_id) {
+        setContextId(response.context_id);
+      }
+      
     } catch (error) {
       const errorMessage = {
         type: 'system',
-        sql: error.response?.data?.sql || '未能生成 SQL',
+        content: value,
+        sql: '未能生成 SQL',
         result: [],
         error: error.response?.data?.detail || '查询失败，请重试',
         timestamp: new Date().toLocaleTimeString(),
@@ -130,13 +133,6 @@ function Dashboard() {
         title={
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>自然语言数据库查询</span>
-            <Button 
-              type="text" 
-              icon={<LogoutOutlined />} 
-              onClick={handleLogout}
-            >
-              退出
-            </Button>
           </div>
         }
         className="chat-card"

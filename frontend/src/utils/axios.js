@@ -4,7 +4,8 @@ import { message } from 'antd';
 
 // 创建 axios 实例
 const instance = axios.create({
-  baseURL: 'http://localhost:8000'
+  baseURL: 'http://localhost:8000',
+  timeout: 10000
 });
 
 // 请求拦截器
@@ -23,12 +24,14 @@ instance.interceptors.request.use(
 
 // 响应拦截器
 instance.interceptors.response.use(
-  response => response,
+  response => response.data,  // 直接返回响应数据
   error => {
     if (error.response?.status === 401) {
       Cookies.remove('token');
       window.location.href = '/login';
       message.error('登录已过期，请重新登录');
+    } else {
+      message.error(error.response?.data?.detail || '请求失败');
     }
     return Promise.reject(error);
   }

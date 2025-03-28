@@ -13,25 +13,27 @@ function Login() {
     setLoading(true);
     try {
       const response = await axios.post('/login', values);
-      const { token } = response.data;
-      // 确保 token 被正确设置
-      Cookies.set('token', token, { 
-        expires: 1,
-        path: '/',
-        sameSite: 'Lax'
-      });
-      message.success('登录成功');
-      // 添加一个小延时确保 cookie 已被设置
-      setTimeout(() => {
-        navigate('/dashboard', { replace: true });
-      }, 100);
+      // 检查响应数据结构
+      if (response?.token) {
+        Cookies.set('token', response.token, { 
+          expires: 1,
+          path: '/',
+          sameSite: 'Lax'
+        });
+        message.success('登录成功');
+        setTimeout(() => {
+          navigate('/dashboard', { replace: true });
+        }, 100);
+      } else {
+        throw new Error('登录响应格式错误');
+      }
     } catch (error) {
       console.error('登录请求错误:', error);
-      message.error(error.response?.data?.message || '登录失败');
+      message.error(error.response?.data?.detail || '登录失败');
     } finally {
       setLoading(false);
     }
-};
+  }; // 删除这里多余的分号
 
   return (
     <div className="login-container">
