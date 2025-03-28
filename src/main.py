@@ -1,14 +1,24 @@
-from fastapi import FastAPI, Request, Body
+from fastapi import FastAPI, Request, Body, Depends, HTTPException
+from fastapi.security import HTTPBearer
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
+from datetime import datetime
 import json
 import os
-from datetime import datetime
-from fastapi.middleware.cors import CORSMiddleware
-from .protocol.query_protocol import QueryRequest, QueryResponse
+
 from .model.query_model import QueryModel
+from .protocol.query_protocol import QueryRequest, QueryResponse
+from .utils.auth import verify_token, create_access_token, verify_password
+from .config.auth_db import AuthBase, auth_engine, AuthSessionLocal
+from .database.models.user import User
 
 app = FastAPI()
+security = HTTPBearer()
 
-# 添加 CORS 中间件
+# 初始化认证数据库
+AuthBase.metadata.create_all(bind=auth_engine)
+
+# CORS配置
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -18,13 +28,44 @@ app.add_middleware(
 )
 
 # 配置信息
-DB_URL = "mysql+pymysql://root:sa123@localhost:3306/air"
+DB_URL = "mysql+pymysql://root:sa123@localhost:3306/air"  # 目标查询数据库
 DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"
 API_KEY = "sk-073ca480b9184dcf9e1be31f805a356b"
 
-query_model = QueryModel(DB_URL, API_KEY, DEEPSEEK_API_URL)
+# 初始化查询模型
+try:
+    print("正在初始化查询模型...")
+    query_model = QueryModel(
+        db_url=DB_URL,
+        api_key=API_KEY,
+        api_url=DEEPSEEK_API_URL
+    )
+    print("查询模型初始化成功")
+except Exception as e:
+    print(f"查询模型初始化失败: {str(e)}")
+    raise
 
-@app.post("/query_nl")  # 改名为 query_nl，表示自然语言查询
+# 数据库依赖
+def get_auth_db():
+    db = AuthSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# 认证路由
+@app.post("/login")
+async def login(username: str = Body(...), password: str = Body(...), db: Session = Depends(get_auth_db)):
+    print(f"收到登录请求: username={username}")
+    user = db.query(User).filter(User.username == username).first()
+    if not user or not verify_password(password, user.password):
+        raise HTTPException(status_code=401, detail="用户名或密码错误")
+    
+    token = create_access_token({"sub": user.username, "role": user.role})
+    return {"token": token}
+
+# 其他路由保持不变
+@app.post("/query_nl", dependencies=[Depends(verify_token)])
 async def process_query(request: QueryRequest) -> QueryResponse:
     # 创建或获取上下文
     context_id = request.context_id or query_model.context_manager.create_context()
@@ -57,7 +98,7 @@ FEEDBACK_FILE = "d:\\mycode\\demo04\\feedback\\feedback_data.json"
 # 确保反馈目录存在
 os.makedirs(os.path.dirname(FEEDBACK_FILE), exist_ok=True)
 
-@app.post("/execute_sql")  # 直接执行 SQL
+@app.post("/execute_sql", dependencies=[Depends(verify_token)])  # 直接执行 SQL
 async def execute_query(
     sql: str = Body(..., description="SQL语句")
 ):
@@ -68,7 +109,7 @@ async def execute_query(
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-@app.post("/execute_edited")  # 执行编辑后的 SQL
+@app.post("/execute_edited", dependencies=[Depends(verify_token)])  # 执行编辑后的 SQL
 async def execute_edited_query(
     original_sql: str = Body(..., description="原始 SQL"),
     edited_sql: str = Body(..., description="编辑后的 SQL")
@@ -80,7 +121,7 @@ async def execute_edited_query(
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-@app.post("/feedback")  # 反馈路由保持不变
+@app.post("/feedback", dependencies=[Depends(verify_token)])  # 反馈路由保持不变
 async def feedback(request: Request):
     data = await request.json()
     query = data.get("query")

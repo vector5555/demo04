@@ -70,5 +70,17 @@
     "query": "[编辑] 集美有几个监测站点？",
     "sql": "SELECT COUNT(DISTINCT CDMC) AS num_monitoring_sites FROM envom_origin WHERE JCQ LIKE '%集美%';",
     "rating": 5
+  },
+  {
+    "timestamp": "2025-03-26 20:30:27",
+    "query": "查询2018年第二季度坂头的空气质量指数变化趋势。",
+    "sql": "SELECT CYRQ, AQI FROM envom_origin WHERE CDMC = '坂头' AND CYRQ >= '2018-04-01' AND CYRQ <= '2018-06-30' ORDER BY CYRQ;",
+    "rating": 5
+  },
+  {
+    "timestamp": "2025-03-26 21:38:38",
+    "query": "[编辑] 坂头2018年第二季度AQI的变化趋势",
+    "sql": "SELECT CYRQ, AQI FROM envom_origin WHERE CDMC = '坂头' AND CYRQ >= '2018-04-01' AND CYRQ <= '2018-06-30' ORDER BY CYRQ;",
+    "rating": 5
   }
 ]

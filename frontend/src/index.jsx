@@ -1,7 +1,12 @@
 import React from 'react';
-import { createRoot } from 'react-dom/client';
+import ReactDOM from 'react-dom/client';
+// 修正大小写敏感的导入路径
 import App from './App';
+import './index.css';
 
-const container = document.getElementById('root');
-const root = createRoot(container);
-root.render(<App />);
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);

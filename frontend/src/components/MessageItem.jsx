@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Alert, Typography, Rate, Collapse, Space } from 'antd';  // Add Space
+import { Card, Button, Alert, Typography, Rate, Collapse, Space } from 'antd';
 import { EditOutlined } from '@ant-design/icons';
 import DataVisualization from './DataVisualization';
 import { detectChartType } from '../utils/chartSelector';
+import '../styles/Message.css';  // 添加这行
 
 const { Text } = Typography;
 const { Panel } = Collapse;

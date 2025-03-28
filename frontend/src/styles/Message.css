@@ -1,0 +1,210 @@
+/* 主容器样式 */
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f5f5f5;
+}
+
+/* 消息容器样式 */
+.messages-container {
+  flex: 1;
+  padding: 20px;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  margin-bottom: 100px;
+}
+
+/* 空状态下的输入框容器 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 200px);
+}
+
+/* 用户消息样式 */
+.user-message {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin: 24px 0;
+  padding: 16px 24px;
+  background: #e6f4ff;
+  border-radius: 12px;
+  max-width: 80%;
+  margin-left: auto;
+  position: relative;
+}
+
+/* 系统消息样式 */
+.system-message {
+  margin: 24px 0;
+  padding: 24px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  max-width: 90%;
+}
+
+/* 时间戳样式 */
+.message-time {
+  font-size: 12px;
+  color: #999;
+  margin-top: 8px;
+}
+
+/* 输入框容器样式 */
+.query-input-container {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 800px;
+  padding: 16px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 1000;
+}
+
+/* 输入框样式 */
+.query-input {
+  position: relative;
+}
+
+.query-input .ant-input {
+  padding: 16px;
+  padding-right: 120px;  /* 为按钮留出空间 */
+  font-size: 16px;
+  border-radius: 12px;
+  resize: none;
+  min-height: 80px;
+  background: #f5f7fa;
+  border: 1px solid #e8e8e8;
+}
+
+.query-input .ant-btn {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  height: 36px;
+  padding: 0 20px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #1677ff;
+  border: none;
+  transition: all 0.3s;
+}
+
+.query-input .ant-btn:hover {
+  background: #4096ff;
+}
+
+.query-input .ant-btn .anticon {
+  font-size: 16px;
+}
+
+.query-input .ant-input-search-button {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  width: auto;
+  height: auto;
+  padding: 8px 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  background: #1890ff;
+  border: none;
+}
+
+/* 表格容器样式 */
+.table-wrapper {
+  max-height: 400px;
+  overflow-y: auto;
+  margin: 16px 0;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+}
+
+/* 表格样式 */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+th {
+  background: #fafafa;
+  font-weight: 500;
+}
+
+.index-column {
+  width: 50px;
+  text-align: center;
+  background: #fafafa;
+}
+
+/* 可视化容器样式 */
+.visualization-container {
+  margin: 16px 0;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 4px;
+}
+
+/* 反馈区域样式 */
+.feedback-section {
+  margin: 16px 0;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 4px;
+  text-align: center;
+}
+
+/* SQL面板样式 */
+.ant-collapse-header {
+  background: #fafafa;
+}
+
+pre {
+  background: #f6f8fa;
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+/* 消息列表头部样式 */
+.messages-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.messages-header h2 {
+  margin: 0;
+  color: #1f1f1f;
+  font-size: 20px;
+}
+
+.logout-button {
+  color: #666;
+  transition: color 0.3s;
+}
+
+.logout-button:hover {
+  color: #1677ff;
+}
