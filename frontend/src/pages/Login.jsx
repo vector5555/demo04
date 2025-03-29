@@ -13,13 +13,16 @@ function Login() {
     setLoading(true);
     try {
       const response = await axios.post('/login', values);
-      // 检查响应数据结构
+      console.log('登录响应:', response); // 添加日志查看响应数据结构
+      
       if (response?.token) {
         Cookies.set('token', response.token, { 
           expires: 1,
           path: '/',
           sameSite: 'Lax'
         });
+        // 保存用户名，使用表单中的用户名
+        Cookies.set('username', values.username);
         message.success('登录成功');
         setTimeout(() => {
           navigate('/dashboard', { replace: true });

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Layout, Menu } from 'antd';
 import { Outlet, useNavigate } from 'react-router-dom';
+import Cookies from 'js-cookie';  // 添加 Cookies 导入
 import {
   UserOutlined,
   TeamOutlined,
@@ -12,6 +13,7 @@ const { Header, Content, Sider } = Layout;
 
 const BasicLayout = () => {
   const navigate = useNavigate();
+  const username = Cookies.get('username') || '未登录';  // 从 Cookies 获取用户名
 
   const menuItems = [
     {
@@ -48,7 +50,8 @@ const BasicLayout = () => {
   ];
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    Cookies.remove('token');
+    Cookies.remove('username');  // 退出时同时清除用户名
     navigate('/login');
   };
 
@@ -56,8 +59,11 @@ const BasicLayout = () => {
     <Layout style={{ minHeight: '100vh' }}>
       <Header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ color: 'white', fontSize: '20px' }}>自然语言查询系统</div>
-        <div onClick={handleLogout} style={{ color: 'white', cursor: 'pointer' }}>
-          <LogoutOutlined /> 退出
+        <div style={{ display: 'flex', alignItems: 'center', color: 'white' }}>
+          <span style={{ marginRight: '20px' }}>当前用户: {username}</span>
+          <div onClick={handleLogout} style={{ cursor: 'pointer' }}>
+            <LogoutOutlined /> 退出
+          </div>
         </div>
       </Header>
       <Layout>
