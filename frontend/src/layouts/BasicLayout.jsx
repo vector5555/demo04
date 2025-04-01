@@ -7,6 +7,7 @@ import {
   TeamOutlined,
   DashboardOutlined,
   LogoutOutlined,
+  DatabaseOutlined, // 添加数据库图标
 } from '@ant-design/icons';
 
 const { Header, Content, Sider } = Layout;
@@ -44,6 +45,19 @@ const BasicLayout = () => {
           icon: <TeamOutlined />,
           label: '用户角色分配',
           onClick: () => navigate('/admin/role-user')
+        },
+        {
+          key: 'role-permissions',
+          icon: <TeamOutlined />,
+          label: '权限配置',
+          onClick: () => navigate('/admin/role-permissions')
+        },
+        // 添加数据库配置菜单项
+        {
+          key: 'database-config',
+          icon: <DatabaseOutlined />,
+          label: '数据库配置',
+          onClick: () => navigate('/admin/database-config')
         }
       ]
     }

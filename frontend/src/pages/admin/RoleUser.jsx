@@ -12,13 +12,36 @@ const RoleUser = () => {
   const [currentUser, setCurrentUser] = useState(null);
 
   // 获取用户列表
+  // 修改获取用户列表的函数，确保获取到用户的角色信息
   const fetchUsers = async () => {
     setLoading(true);
     try {
       const response = await axios.get('/users');
       // 确保 response.data 是数组
       const userData = Array.isArray(response.data) ? response.data : response.data.data || [];
-      setUsers(userData);
+      
+      // 获取每个用户的角色信息
+      const usersWithRoles = await Promise.all(userData.map(async (user) => {
+        try {
+          const roleResponse = await axios.get(`/users/${user.id}/roles`);
+          const roleData = Array.isArray(roleResponse.data) 
+            ? roleResponse.data 
+            : roleResponse.data.data || [];
+          
+          return {
+            ...user,
+            roles: roleData
+          };
+        } catch (error) {
+          console.error(`获取用户 ${user.id} 的角色失败:`, error);
+          return {
+            ...user,
+            roles: []
+          };
+        }
+      }));
+      
+      setUsers(usersWithRoles);
     } catch (error) {
       console.error('获取用户列表失败:', error);
       message.error('获取用户列表失败');
@@ -45,6 +68,7 @@ const RoleUser = () => {
       const response = await axios.get(`/users/${userId}/roles`);
       // 确保 response.data 是数组
       const roleData = Array.isArray(response.data) ? response.data : response.data.data || [];
+      //alert(roleData);
       setSelectedRoles(roleData.map(role => role.id));
     } catch (error) {
       console.error('获取用户角色失败:', error);
@@ -73,6 +97,7 @@ const RoleUser = () => {
       await axios.post(`/users/${currentUser.id}/roles`, requestData);
       message.success('角色分配成功');
       setModalVisible(false);
+      // 重新获取用户列表，包括角色信息
       fetchUsers();
     } catch (error) {
       console.error('角色分配失败:', error.response?.data || error);
@@ -80,6 +105,7 @@ const RoleUser = () => {
     }
   };
 
+  // 修改表格列定义中的当前角色列
   const columns = [
     {
       title: '用户名',
@@ -88,11 +114,16 @@ const RoleUser = () => {
     },
     {
       title: '当前角色',
-      dataIndex: 'roles',
       key: 'roles',
-      render: (_, record) => (
-        <span>{record.roles?.map(role => role.name).join(', ') || '无'}</span>
-      )
+      render: (_, record) => {
+        // 检查角色数据是否存在
+        if (!record.roles || !Array.isArray(record.roles) || record.roles.length === 0) {
+          return '无';
+        }
+        
+        // 显示角色名称
+        return record.roles.map(role => role.name).join(', ');
+      }
     },
     {
       title: '操作',

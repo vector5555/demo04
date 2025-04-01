@@ -1,3 +1,24 @@
+/**
+ * 数据可视化组件
+ * 
+ * 功能：
+ * - 根据输入数据自动推荐合适的图表类型
+ * - 支持折线图、柱状图、饼图、散点图、直方图等多种图表
+ * - 提供可视化建议和图表生成功能
+ * 
+ * 参数说明：
+ * @param {Array} data - 要可视化的数据数组
+ * @param {string} type - 图表类型，可选值：'auto'(自动),'line','bar','pie','scatter','histogram'
+ * @param {string} title - 图表标题
+ * 
+ * 使用示例：
+ * <DataVisualization 
+ *   data={yourData} 
+ *   type="auto" 
+ *   title="数据分析结果" 
+ * />
+ */
+
 import React, { useState, useEffect, useRef } from 'react';
 import Plotly from 'plotly.js-dist';
 import { Button, Alert, Space, Typography } from 'antd';
