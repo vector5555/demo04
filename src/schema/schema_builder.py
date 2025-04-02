@@ -8,9 +8,9 @@ class SchemaBuilder:
     """
     根据用户角色权限构建个性化数据库schema
     """
-    def __init__(self, engine: Engine):
-        self.engine = engine
-        self.inspector = inspect(engine)
+    def __init__(self, db_url: str):
+        self.engine = create_engine(db_url)
+        self.inspector = inspect(self.engine)
         self.metadata = MetaData()
         self.tables_info = {}
         self.relationships = {}

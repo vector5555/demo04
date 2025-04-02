@@ -15,8 +15,8 @@ function Login() {
       const response = await axios.post('/login', values);
       console.log('登录响应:', response); // 添加日志查看响应数据结构
       
-      if (response?.token) {
-        Cookies.set('token', response.token, { 
+      if (response.data.token) {
+        Cookies.set('token', response.data.token, { 
           expires: 1,
           path: '/',
           sameSite: 'Lax'

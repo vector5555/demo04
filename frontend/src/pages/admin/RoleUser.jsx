@@ -17,17 +17,19 @@ const RoleUser = () => {
     setLoading(true);
     try {
       const response = await axios.get('/users');
+      console.log(response);
       // 确保 response.data 是数组
-      const userData = Array.isArray(response.data) ? response.data : response.data.data || [];
+      const userData = Array.isArray(response.data) ? response.data : response.data || [];
       
       // 获取每个用户的角色信息
       const usersWithRoles = await Promise.all(userData.map(async (user) => {
         try {
           const roleResponse = await axios.get(`/users/${user.id}/roles`);
-          const roleData = Array.isArray(roleResponse.data) 
-            ? roleResponse.data 
-            : roleResponse.data.data || [];
-          
+          console.log("roleResponse:",roleResponse)
+          const roleData = Array.isArray(roleResponse) 
+            ? roleResponse 
+            : roleResponse || [];
+          console.log("roleData:",roleData)
           return {
             ...user,
             roles: roleData
@@ -54,7 +56,7 @@ const RoleUser = () => {
     try {
       const response = await axios.get('/roles');
       // 确保 response.data 是数组
-      const roleData = Array.isArray(response.data) ? response.data : response.data.data || [];
+      const roleData = Array.isArray(response.data) ? response.data : response.data || [];
       setRoles(roleData);
     } catch (error) {
       console.error('获取角色列表失败:', error);
@@ -67,7 +69,7 @@ const RoleUser = () => {
     try {
       const response = await axios.get(`/users/${userId}/roles`);
       // 确保 response.data 是数组
-      const roleData = Array.isArray(response.data) ? response.data : response.data.data || [];
+      const roleData = Array.isArray(response) ? response : response || [];
       //alert(roleData);
       setSelectedRoles(roleData.map(role => role.id));
     } catch (error) {
@@ -117,6 +119,7 @@ const RoleUser = () => {
       key: 'roles',
       render: (_, record) => {
         // 检查角色数据是否存在
+        console.log(record)
         if (!record.roles || !Array.isArray(record.roles) || record.roles.length === 0) {
           return '无';
         }

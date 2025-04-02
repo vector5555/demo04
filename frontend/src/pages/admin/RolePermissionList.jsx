@@ -12,8 +12,16 @@ const RolePermissionList = () => {
     setLoading(true);
     try {
       const response = await axios.get('/roles');
-      setRoles(response.data || []);
+      console.log('获取角色响应:', response); // 添加日志查看响应数据
+      
+      // 修正这里，确保正确处理后端返回的数据结构
+      if (response && response.status === 'success' && response.data) {
+        setRoles(response.data);
+      } else {
+        setRoles(response.data || []);
+      }
     } catch (error) {
+      console.error('获取角色列表失败:', error);
       message.error('获取角色列表失败');
     } finally {
       setLoading(false);
