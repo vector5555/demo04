@@ -8,6 +8,7 @@ import {
   DashboardOutlined,
   LogoutOutlined,
   DatabaseOutlined, // 添加数据库图标
+  ApiOutlined, // 添加API图标用于LLM配置
 } from '@ant-design/icons';
 
 const { Header, Content, Sider } = Layout;
@@ -58,6 +59,13 @@ const BasicLayout = () => {
           icon: <DatabaseOutlined />,
           label: '数据库配置',
           onClick: () => navigate('/admin/database-config')
+        },
+        // 添加LLM配置菜单项
+        {
+          key: 'llm-config',
+          icon: <ApiOutlined />,
+          label: 'LLM配置',
+          onClick: () => navigate('/admin/llm-config')
         }
       ]
     }

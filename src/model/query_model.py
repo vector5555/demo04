@@ -8,7 +8,8 @@ from pathlib import Path
 from ..vector_store.feedback_store import FeedbackVectorStore
 
 class QueryModel:
-    def __init__(self, db_url: str, api_key: str, api_url: str):
+    def __init__(self, db_url: str, api_key: str, api_url: str, model_name: str = "deepseek-chat", 
+                 temperature: float = 0.7, max_tokens: int = 2000, top_p: float = 0.95):
         self.engine = create_engine(
             db_url,
             pool_size=5,
@@ -20,6 +21,13 @@ class QueryModel:
         self.context_manager = QueryContext()
         self.api_key = api_key
         self.api_url = api_url
+        # 保存模型参数
+        self.model_params = {
+            "model": model_name,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "top_p": top_p
+        }
         print("正在初始化数据库连接...")
         # 在初始化时获取 schema 信息并缓存
         print("开始加载数据库 Schema 信息...")
@@ -114,7 +122,7 @@ class QueryModel:
                 print(f"请求头: {headers}")
                 
                 payload = {
-                    "model": "deepseek-chat",
+                    "model": self.model_params["model"],  # 使用模型参数
                     "messages": [
                         {
                             "role": "system",
@@ -130,8 +138,8 @@ Return ONLY the SQL query without any explanation or markdown formatting."""
                             "content": f"""Database Schema:\n{self._schema_info}\n\nUser Query: {query}"""
                         }
                     ],
-                    "temperature": 0.0,
-                    "max_tokens": 2000
+                    "temperature": self.model_params["temperature"],  # 使用模型参数
+                    "max_tokens": self.model_params["max_tokens"]     # 使用模型参数
                 }
                 print(f"请求体: {payload}")
                 

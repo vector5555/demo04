@@ -23,7 +23,7 @@ const DatabaseConfig = () => {
           password: config.password || ''
         });
         setConfigExists(true);
-        message.success('已加载现有数据库配置');
+        //message.success('已加载现有数据库配置');
       }
     } catch (error) {
       console.error('获取数据库配置失败:', error);

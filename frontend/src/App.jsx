@@ -16,6 +16,8 @@
  *     - /role-user: 角色用户管理
  *     - /role-permissions: 角色权限列表
  *     - /role-permission/:roleId: 角色权限配置
+ *     - /database-config: 数据库配置
+ *     - /llm-config: LLM配置
  */
 
 import React from 'react';
@@ -29,6 +31,7 @@ import RoleUser from './pages/admin/RoleUser';
 import RolePermission from './pages/admin/RolePermission';
 import RolePermissionList from './pages/admin/RolePermissionList';
 import DatabaseConfig from './pages/admin/DatabaseConfig';
+import LLMConfig from './pages/admin/LLMConfig'; // 导入LLM配置组件
 import PrivateRoute from './components/PrivateRoute';
 
 function App() {
@@ -44,8 +47,8 @@ function App() {
             <Route path="role-user" element={<RoleUser />} />
             <Route path="role-permissions" element={<RolePermissionList />} />
             <Route path="role-permission/:roleId" element={<RolePermission />} />
-            // 在路由配置中添加数据库配置页面
-            <Route path="/admin/database-config" element={<DatabaseConfig />} />
+            <Route path="database-config" element={<DatabaseConfig />} />
+            <Route path="llm-config" element={<LLMConfig />} /> {/* 添加LLM配置路由 */}
           </Route>
         </Route>
       </Routes>

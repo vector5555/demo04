@@ -39,18 +39,54 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 移除硬编码的配置信息
 # 配置信息
 DB_URL = "mysql+pymysql://root:sa123@localhost:3306/air"  # 目标查询数据库
-DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"
-API_KEY = "sk-073ca480b9184dcf9e1be31f805a356b"
+
+# 添加数据库配置文件路径常量
+DB_CONFIG_FILE = "config\\db_config.json"
+# 添加LLM API配置文件路径常量
+LLM_CONFIG_FILE = "config\\llm_config.json"
+
+# 确保配置目录存在
+os.makedirs(os.path.dirname(DB_CONFIG_FILE), exist_ok=True)
+os.makedirs(os.path.dirname(LLM_CONFIG_FILE), exist_ok=True)
+
+# 默认LLM配置
+default_llm_config = {
+    "api_url": "https://api.deepseek.com/v1/chat/completions",
+    "api_key": "",  # 移除硬编码的API密钥
+    "model_name": "deepseek-chat",
+    "temperature": 0.7,
+    "max_tokens": 2000,
+    "top_p": 0.95,
+    "timeout": 60
+}
+
+# 加载LLM配置
+llm_config = default_llm_config.copy()
+try:
+    if os.path.exists(LLM_CONFIG_FILE):
+        with open(LLM_CONFIG_FILE, 'r', encoding='utf-8') as f:
+            saved_config = json.load(f)
+            llm_config.update(saved_config)
+            print(f"已从 {LLM_CONFIG_FILE} 加载LLM配置")
+    else:
+        print(f"LLM配置文件不存在，使用默认配置")
+except Exception as e:
+    print(f"加载LLM配置失败: {str(e)}")
 
 # 初始化查询模型
 try:
     print("正在初始化查询模型...")
     query_model = QueryModel(
         db_url=DB_URL,
-        api_key=API_KEY,
-        api_url=DEEPSEEK_API_URL
+        api_key=llm_config["api_key"],
+        api_url=llm_config["api_url"],
+        model_name=llm_config["model_name"],
+        temperature=llm_config["temperature"],
+        max_tokens=llm_config["max_tokens"],
+        top_p=llm_config["top_p"]
     )
     print("查询模型初始化成功")
 except Exception as e:
@@ -122,7 +158,7 @@ async def process_query(request: QueryRequest) -> QueryResponse:
         raise HTTPException(status_code=500, detail=str(e))
 
 # 添加文件路径常量
-FEEDBACK_FILE = "d:\\mycode\\demo04\\feedback\\feedback_data.json"
+FEEDBACK_FILE = "feedback\\feedback_data.json"
 
 # 确保反馈目录存在
 os.makedirs(os.path.dirname(FEEDBACK_FILE), exist_ok=True)
@@ -253,72 +289,6 @@ async def delete_role(role_id: int, db: Session = Depends(get_auth_db)):
     
     try:
         db.delete(role)
-        db.commit()
-        return {"status": "success"}
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-
-# 在角色管理路由后添加用户-角色分配相关接口
-@app.get("/users/{user_id}/roles", dependencies=[Depends(verify_token)])
-async def get_user_roles(user_id: int, db: Session = Depends(get_auth_db)):
-    """获取用户的角色列表"""
-    user_roles = db.query(UserRole).filter(UserRole.user_id == user_id).all()
-    roles = []
-    for user_role in user_roles:
-        role = db.query(Role).filter(Role.id == user_role.role_id).first()
-        if role:
-            roles.append({"id": role.id, "name": role.role_name})
-    return {"status": "success", "data": roles}
-
-@app.post("/users/{user_id}/roles", dependencies=[Depends(verify_token)])
-async def assign_user_roles(
-    user_id: int,
-    role_ids: list[int] = Body(..., description="角色ID列表"),
-    db: Session = Depends(get_auth_db)
-):
-    """为用户分配角色"""
-    try:
-        # 检查用户是否存在
-        user = db.query(User).filter(User.id == user_id).first()
-        if not user:
-            raise HTTPException(status_code=404, detail="用户不存在")
-        
-        # 删除用户现有的所有角色
-        db.query(UserRole).filter(UserRole.user_id == user_id).delete()
-        
-        # 分配新的角色
-        for role_id in role_ids:
-            # 检查角色是否存在
-            role = db.query(Role).filter(Role.id == role_id).first()
-            if not role:
-                raise HTTPException(status_code=404, detail=f"角色ID {role_id} 不存在")
-            
-            user_role = UserRole(user_id=user_id, role_id=role_id)
-            db.add(user_role)
-        
-        db.commit()
-        return {"status": "success"}
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.delete("/users/{user_id}/roles/{role_id}", dependencies=[Depends(verify_token)])
-async def remove_user_role(
-    user_id: int,
-    role_id: int,
-    db: Session = Depends(get_auth_db)
-):
-    """移除用户的指定角色"""
-    try:
-        user_role = db.query(UserRole).filter(
-            and_(UserRole.user_id == user_id, UserRole.role_id == role_id)
-        ).first()
-        
-        if not user_role:
-            raise HTTPException(status_code=404, detail="未找到指定的用户-角色关联")
-        
-        db.delete(user_role)
         db.commit()
         return {"status": "success"}
     except Exception as e:
@@ -705,10 +675,13 @@ async def get_role_permissions(role_id: int, db: Session = Depends(get_auth_db))
 # async def set_role_permissions(...)
 
 # 添加数据库配置文件路径常量
-DB_CONFIG_FILE = "config\\db_config.json"
+DB_CONFIG_FILE = "d:\\mycode\\demo04\\config\\db_config.json"
+# 添加LLM API配置文件路径常量
+LLM_CONFIG_FILE = "d:\\mycode\\demo04\\config\\llm_config.json"
 
 # 确保配置目录存在
 os.makedirs(os.path.dirname(DB_CONFIG_FILE), exist_ok=True)
+os.makedirs(os.path.dirname(LLM_CONFIG_FILE), exist_ok=True)
 
 # 添加数据库配置模型
 class DatabaseConfig(BaseModel):
@@ -753,3 +726,129 @@ async def save_database_config(config: DatabaseConfig):
         raise HTTPException(status_code=400, detail=f"数据库连接失败: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# 添加LLM API配置模型
+class LLMConfig(BaseModel):
+    api_url: str
+    api_key: str
+    model_name: str = "deepseek-chat"
+    temperature: float = 0.7
+    max_tokens: int = 2000
+    top_p: float = 0.95
+    timeout: int = 60
+
+# 添加LLM API配置相关的API接口
+@app.get("/llm/config")
+async def get_llm_config():
+    """获取大语言模型API配置"""
+    try:
+        # 如果配置文件不存在，返回默认配置
+        if not os.path.exists(LLM_CONFIG_FILE):
+            print(f"LLM配置文件不存在: {LLM_CONFIG_FILE}，返回默认配置")
+            return {
+                "status": "success", 
+                "data": default_llm_config,
+                "message": "使用默认配置"
+            }
+        
+        # 读取配置文件
+        with open(LLM_CONFIG_FILE, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+            print(f"成功从 {LLM_CONFIG_FILE} 读取LLM配置")
+        
+        return {"status": "success", "data": config}
+    except Exception as e:
+        print(f"获取LLM配置失败: {str(e)}")
+        # 出错时也返回默认配置
+        return {
+            "status": "success", 
+            "data": default_llm_config,
+            "message": f"读取配置失败，使用默认配置: {str(e)}"
+        }
+
+@app.post("/llm/config")
+async def save_llm_config(config: LLMConfig):
+    """保存大语言模型API配置"""
+    try:
+        # 保存配置到文件
+        config_dir = os.path.dirname(LLM_CONFIG_FILE)
+        print(f"确保配置目录存在: {config_dir}")
+        os.makedirs(config_dir, exist_ok=True)  # 确保目录存在
+        
+        config_data = config.dict()
+        print(f"准备保存的配置数据: {config_data}")
+        
+        # 使用绝对路径并确保文件可写
+        print(f"正在写入配置文件: {LLM_CONFIG_FILE}")
+        with open(LLM_CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(config_data, f, ensure_ascii=False, indent=2)
+        
+        # 更新当前运行的模型配置
+        global query_model
+        query_model.api_url = config.api_url
+        query_model.api_key = config.api_key
+        query_model.model_params = {
+            "model": config.model_name,
+            "temperature": config.temperature,
+            "max_tokens": config.max_tokens,
+            "top_p": config.top_p
+        }
+        
+        print(f"LLM配置已成功保存到: {LLM_CONFIG_FILE}")
+        # 确保返回正确的响应格式
+        return {"status": "success", "message": "LLM API配置保存成功"}
+    except Exception as e:
+        error_msg = f"保存LLM配置失败: {str(e)}"
+        print(error_msg)
+        # 确保返回错误时也使用正确的响应格式
+        return {"status": "error", "message": error_msg}
+
+# 添加测试LLM API连接的接口
+@app.post("/llm/test-connection")
+async def test_llm_connection(config: LLMConfig):
+    """测试LLM API连接"""
+    try:
+        import requests
+        import aiohttp
+        
+        print(f"测试LLM连接: {config.api_url}")
+        print(f"使用API密钥: {config.api_key[:5]}...{config.api_key[-5:]}")
+        
+        # 使用aiohttp进行异步请求，与QueryModel中使用的方式保持一致
+        async with aiohttp.ClientSession() as session:
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {config.api_key}"
+            }
+            
+            data = {
+                "model": config.model_name,
+                "messages": [{"role": "user", "content": "Hello"}],
+                "temperature": config.temperature,
+                "max_tokens": 10
+            }
+            
+            print(f"发送测试请求到: {config.api_url}")
+            print(f"请求数据: {data}")
+            
+            async with session.post(
+                config.api_url,
+                headers=headers,
+                json=data,
+                timeout=config.timeout
+            ) as response:
+                response_text = await response.text()
+                status_code = response.status
+                print(f"API响应状态码: {status_code}")
+                print(f"API响应内容: {response_text[:200]}...")
+                
+                if status_code == 200:
+                    return {"status": "success", "message": "LLM API连接成功"}
+                else:
+                    return {"status": "error", "message": f"LLM API连接失败: {response_text}"}
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"LLM API连接测试异常: {str(e)}")
+        print(f"错误详情: {error_detail}")
+        return {"status": "error", "message": f"LLM API连接测试失败: {str(e)}"}
