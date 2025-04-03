@@ -4,6 +4,22 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine
 import os
 import json
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
+import secrets
+
+# 创建FastAPI应用
+app = FastAPI()
+security = HTTPBearer()
+
+# 添加Session中间件
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=secrets.token_urlsafe(32),  # 生成随机密钥
+    max_age=3600,  # session有效期，单位秒
+)
+
+
 
 # 内部导入
 from .config.auth_db import AuthBase, auth_engine
@@ -12,9 +28,7 @@ from .model.query_model import QueryModel
 from .utils.auth import verify_token
 from .routes import auth_routes, query_routes, role_routes, user_routes, database_routes, schema_routes, llm_routes
 
-# 创建FastAPI应用
-app = FastAPI()
-security = HTTPBearer()
+
 
 # 初始化认证数据库
 AuthBase.metadata.create_all(bind=auth_engine)

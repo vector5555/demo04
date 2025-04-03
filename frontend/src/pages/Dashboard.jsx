@@ -59,9 +59,11 @@ function Dashboard() {
     
     setLoading(true);
     try {
-      const response = await axios.post('/query_nl', {
+      // 修改为使用带权限控制的接口
+      const response = await axios.post('/query_nl_with_auth', {
         query_text: value,
-        context_id: contextId
+        context_id: contextId,
+        // 不需要显式传递用户信息，后端会从token中获取
       });
       
       // 修改这里：直接使用 response 而不是 response.data

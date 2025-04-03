@@ -8,6 +8,7 @@ from ..database.models.user import User
 from ..database.models.role import Role, UserRole, RolePermission
 from ..utils.auth import verify_token, create_access_token, verify_password
 from ..schema.schema_builder import SchemaBuilder
+from starlette.middleware.sessions import SessionMiddleware
 
 # 设置日志
 logger = logging.getLogger(__name__)
@@ -19,6 +20,10 @@ router = APIRouter(tags=["认证"])
 async def login(request: Request, db: Session = Depends(get_auth_db)):
     """用户登录"""
     try:
+        print("用户登录开始")
+        print(f"请求scope: {request.scope}")
+        print(f"session是否在scope中: {'session' in request.scope}")
+        
         # 打印请求信息，帮助调试
         body = await request.json()
         logger.info(f"收到登录请求: {body}")
@@ -81,7 +86,20 @@ async def login(request: Request, db: Session = Depends(get_auth_db)):
                 if schema:
                     schemas[role_id] = schema
         
-        logger.info(f"用户 {username} 登录成功")
+        
+        # 将用户ID存储到session中 - 添加错误处理
+        try:
+            if 'session' in request.scope:
+                request.session["user_id"] = user.id
+                request.session["username"] = user.username
+                request.session["roles"] = roles
+                request.session["role_ids"] = role_ids
+                logger.info(f"用户 {username} 登录成功，信息已写入session")
+            else:
+                logger.warning("Session中间件未正确安装，无法访问session")
+        except Exception as session_error:
+            logger.error(f"写入session失败: {str(session_error)}")
+        
         return {
             "status": "success",
             "data": {
