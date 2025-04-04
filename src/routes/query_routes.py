@@ -128,12 +128,28 @@ async def query_natural_language(
     context_id = query_data.get("context_id")
     
     try:
+        print(f"处理带权限的查询，用户ID: {user_id}")
+        
+        # 获取用户权限信息并打印
+        try:
+            from ..database.models.role import RolePermission
+            # 打印RolePermission模型的属性
+            role_perm = auth_db.query(RolePermission).first()
+            if role_perm:
+                print(f"RolePermission模型属性: {dir(role_perm)}")
+                print(f"RolePermission数据: {role_perm.__dict__}")
+            else:
+                print("未找到任何RolePermission记录")
+        except Exception as e:
+            print(f"获取RolePermission信息失败: {str(e)}")
+        
         # 传递request参数
         sql = await query_model.generate_sql(request, query_text, context_id, user_id, auth_db)
-        result = await query_model.execute_query(sql)
+        print(f"生成的SQL: {sql}")
         
         # 执行SQL查询
-        result = await query_model.execute_query(sql)
+        result = await query_model.execute_query(sql, user_id, auth_db)
+        print(f"查询结果: {result}")
         
         # 更新上下文
         if not context_id:
@@ -145,11 +161,13 @@ async def query_natural_language(
             'result': result,
             'state': 'completed'
         })
-        
+        print(f"更新上下文成功")
         return {
             "sql": sql,
             "result": result,
             "context_id": context_id
         }
+        print(f"已返回")
     except Exception as e:
+        print(f"查询执行错误: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

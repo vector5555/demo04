@@ -60,13 +60,29 @@ function Dashboard() {
     setLoading(true);
     try {
       // 修改为使用带权限控制的接口
+      // 移除调试用的alert
+      console.log('发送查询请求:', value);
+
       const response = await axios.post('/query_nl_with_auth', {
         query_text: value,
         context_id: contextId,
-        // 不需要显式传递用户信息，后端会从token中获取
+      }, {
+        // 添加超时设置和详细日志
+        timeout: 60000,
+        onUploadProgress: (p) => console.log('上传进度:', p),
+        onDownloadProgress: (p) => console.log('下载进度:', p),
       });
       
-      // 修改这里：直接使用 response 而不是 response.data
+      console.log('API响应:', response);
+      // 修正：使用response.data获取API返回的数据
+      // const data = response.data;
+      // console.log('响应数据:', data);
+      
+      // 检查响应数据
+      // if (!data) {
+      //   throw new Error('响应数据为空');
+      // }
+      
       const systemMessage = {
         type: 'system',
         content: value,
@@ -83,12 +99,13 @@ function Dashboard() {
       }
       
     } catch (error) {
+      console.log(error);
       const errorMessage = {
         type: 'system',
         content: value,
         sql: '未能生成 SQL',
         result: [],
-        error: error.response?.data?.detail || '查询失败，请重试',
+        error: error || '查询失败，请重试',
         timestamp: new Date().toLocaleTimeString(),
         rated: false
       };

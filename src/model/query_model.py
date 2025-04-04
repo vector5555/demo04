@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple, List
 import aiohttp
 from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.pool import QueuePool
@@ -9,6 +9,7 @@ from ..vector_store.feedback_store import FeedbackVectorStore
 from ..schema.schema_manager import SchemaManager  # 导入SchemaManager
 from ..database.models.role import RolePermission  # 导入角色权限模型
 from fastapi import Request  # 添加这一行导入Request
+from ..validator.sql_validator import SQLValidator  # 导入SQL校验器
 
 class QueryModel:
     def __init__(self, db_url: str, api_key: str, api_url: str, model_name: str = "deepseek-chat", 
@@ -34,6 +35,9 @@ class QueryModel:
         # 初始化SchemaManager
         db_config_path = Path(__file__).parent.parent.parent / 'config' / 'db_config.json'
         self.schema_manager = SchemaManager(str(db_config_path))
+        
+        # 初始化SQL校验器
+        self.sql_validator = SQLValidator()
         
         print("正在初始化数据库连接...")
         # 不在初始化时加载schema信息，而是设置为空字符串
@@ -237,12 +241,15 @@ class QueryModel:
 1. 你只能查询用户有权限访问的表和字段
 2. 必须应用指定的过滤条件（如果有）
 3. 不要尝试绕过这些限制
-4. 如果用户请求访问未授权的表或字段，请礼貌地告知他们没有权限
+4. 如果用户请求访问未授权的表或字段，返回以"ERROR:"开头的消息，说明权限问题
 
 相似查询示例：
 {examples_prompt}
 
-返回格式要求：仅返回SQL查询语句，不要包含任何解释或markdown格式。"""
+返回格式要求：
+- 对于有效查询：仅返回SQL查询语句，不要包含任何解释或markdown格式
+- 对于无权限查询：返回以"ERROR:"开头的简短消息，例如"ERROR: 您没有权限访问请求的表或字段"
+"""
                         },
                         {
                             "role": "user",
@@ -286,24 +293,87 @@ class QueryModel:
             print(f"\n=== SQL 生成错误 ===\n{str(e)}")
             raise Exception(f"SQL 生成失败: {str(e)}")
 
-    async def execute_query(self, sql: str) -> Any:
+    async def validate_sql(self, sql: str, user_id: int = None, auth_db = None) -> Tuple[bool, str, Optional[str]]:
+        """验证SQL是否符合用户权限"""
         try:
-            with self.engine.connect() as connection:
-                # 开始事务
-                with connection.begin():
-                    result = connection.execute(text(sql))
-                    columns = result.keys()
-                    return [dict(zip(columns, row)) for row in result.fetchall()]
+            print(f"验证SQL，用户ID: {user_id}, auth_db是否存在: {auth_db is not None}")
+            
+            # 获取用户权限信息
+            allowed_tables = []
+            allowed_fields = {}
+            filter_conditions = {}
+            
+            if user_id and auth_db:
+                # 从schema_manager获取用户权限信息
+                user_permissions = self.schema_manager.get_user_permissions(user_id, auth_db)
+                allowed_tables = user_permissions.get('allowed_tables', [])
+                allowed_fields = user_permissions.get('allowed_fields', {})
+                filter_conditions = user_permissions.get('filter_conditions', {})
+            else:
+                # 测试/开发模式，允许所有表和字段
+                print("警告: 未提供用户ID，使用完全权限进行验证")
+                # 获取所有表和字段
+                inspector = inspect(self.engine)
+                allowed_tables = inspector.get_table_names()
+                for table in allowed_tables:
+                    columns = inspector.get_columns(table)
+                    allowed_fields[table] = [col['name'] for col in columns]
+            
+            # 调用SQL校验器验证SQL
+            return self.sql_validator.validate_sql(sql, allowed_tables, allowed_fields, filter_conditions)
+            
         except Exception as e:
-            print(f"Database error: {str(e)}")
-            # 如果是连接错误，尝试重新连接
-            if "MySQL server has gone away" in str(e):
+            print(f"SQL验证错误: {str(e)}")
+            return False, f"SQL验证失败: {str(e)}", None
+
+    async def execute_query(self, sql: str, user_id: int = None, auth_db = None) -> Any:
+        """执行SQL查询，添加权限验证"""
+        try:
+            # 验证SQL
+            is_valid, error_msg, corrected_sql = await self.validate_sql(sql, user_id, auth_db)
+            
+            if not is_valid:
+                raise Exception(f"SQL权限验证失败: {error_msg}")
+            
+            # 如果有修正后的SQL，使用修正后的版本
+            if corrected_sql:
+                print(f"使用修正后的SQL: {corrected_sql}")
+                sql = corrected_sql
+            print(f"SQL开始执行")
+            
+            # 执行查询
+            try:
                 with self.engine.connect() as connection:
+                    # 开始事务
                     with connection.begin():
+                        print(f"执行SQL: {sql}")
                         result = connection.execute(text(sql))
                         columns = result.keys()
-                        return [dict(zip(columns, row)) for row in result.fetchall()]
-            raise Exception(f"SQL执行错误: {str(e)}")
+                        rows = result.fetchall()
+                        print(f"查询成功，获取到 {len(rows)} 条记录")
+                        result_list = [dict(zip(columns, row)) for row in rows]
+                print(f"SQL执行成功")
+                return result_list
+            except Exception as e:
+                print(f"SQL执行错误: {str(e)}")
+                # 如果是连接错误，尝试重新连接
+                if "MySQL server has gone away" in str(e):
+                    try:
+                        print("尝试重新连接数据库...")
+                        with self.engine.connect() as connection:
+                            with connection.begin():
+                                result = connection.execute(text(sql))
+                                columns = result.keys()
+                                rows = result.fetchall()
+                                print(f"重连成功，获取到 {len(rows)} 条记录")
+                                return [dict(zip(columns, row)) for row in rows]
+                    except Exception as retry_error:
+                        print(f"重连失败: {str(retry_error)}")
+                        raise Exception(f"SQL执行错误(重连失败): {str(retry_error)}")
+                raise Exception(f"SQL执行错误: {str(e)}")
+        except Exception as e:
+            print(f"执行查询失败: {str(e)}")
+            raise Exception(f"执行查询失败: {str(e)}")
 
     async def execute_edited_query(self, original_sql: str, edited_sql: str) -> Any:
         """执行编辑后的 SQL 查询"""

@@ -321,3 +321,76 @@ class SchemaManager:
         except Exception as e:
             print(f"获取用户schema失败: {str(e)}")
             return "无法获取数据库schema信息"
+    
+    def get_user_permissions(self, user_id: int, auth_db) -> Dict:
+        """获取用户的权限信息"""
+        try:
+            from ..database.models.role import UserRole, RolePermission
+            
+            # 获取用户的角色
+            user_roles = auth_db.query(UserRole).filter(UserRole.user_id == user_id).all()
+            role_ids = [ur.role_id for ur in user_roles]
+            
+            if not role_ids:
+                print(f"用户 {user_id} 没有分配角色")
+                return {'allowed_tables': [], 'allowed_fields': {}, 'filter_conditions': {}}
+            
+            # 获取角色的权限
+            permissions = auth_db.query(RolePermission).filter(
+                RolePermission.role_id.in_(role_ids)
+            ).all()
+            
+            # 打印权限记录，查看属性
+            for perm in permissions:
+                print(f"权限记录: {perm.__dict__}")
+            
+            # 处理权限信息
+            allowed_tables = set()
+            allowed_fields = {}
+            filter_conditions = {}
+            
+            for perm in permissions:
+                # 添加表权限 - 不要尝试访问permission_type
+                allowed_tables.add(perm.table_name)
+                
+                # 处理字段权限
+                if perm.field_list:
+                    if perm.table_name not in allowed_fields:
+                        allowed_fields[perm.table_name] = set()
+                    
+                    # 确保field_list是字符串
+                    if isinstance(perm.field_list, str):
+                        fields = [field.strip() for field in perm.field_list.split(',') if field.strip()]
+                    elif isinstance(perm.field_list, list):
+                        fields = [str(field).strip() for field in perm.field_list]
+                    else:
+                        fields = [str(perm.field_list)]
+                    
+                    allowed_fields[perm.table_name].update(fields)
+                
+                # 处理过滤条件
+                if perm.where_clause:
+                    if perm.table_name not in filter_conditions:
+                        filter_conditions[perm.table_name] = []
+                    
+                    if perm.where_clause is not None:
+                        filter_conditions[perm.table_name].append(perm.where_clause)
+            
+            # 将集合转换为列表
+            for table in allowed_fields:
+                allowed_fields[table] = list(allowed_fields[table])
+            
+            result = {
+                'allowed_tables': list(allowed_tables),
+                'allowed_fields': allowed_fields,
+                'filter_conditions': filter_conditions
+            }
+            
+            print(f"用户 {user_id} 的权限信息: {result}")
+            return result
+            
+        except Exception as e:
+            print(f"获取用户权限失败: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return {'allowed_tables': [], 'allowed_fields': {}, 'filter_conditions': {}}
