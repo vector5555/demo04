@@ -180,7 +180,7 @@ class QueryModel:
         # 使用属性装饰器，返回缓存的 schema 信息
         return self._schema_info
 
-    async def generate_sql(self, request: Request, query: str, context_id: str, user_id: int = None, auth_db = None) -> str:
+    async def generate_sql(self, request: Request, query: str, context_id: str, user_id: Optional[int] = None, auth_db = None) -> str:
         try:
             print("\n=== 开始生成 SQL ===")
             print(f"接收到的查询: {query}")
