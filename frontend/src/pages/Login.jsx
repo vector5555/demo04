@@ -14,15 +14,39 @@ function Login() {
     try {
       const response = await axios.post('/login', values);
       console.log('登录响应:', response); // 添加日志查看响应数据结构
+      console.log('响应数据:', response.data);
+      console.log('响应状态:', response.status);
+      console.log('响应数据内容:', response.data);
       
-      if (response.data.token) {
-        Cookies.set('token', response.data.token, { 
+      if (response.status === 'success') {
+        const { token, username, user_id, permissions } = response.data;
+        console.log('解析的权限信息:', permissions);
+        
+        // 存储token和用户信息
+        Cookies.set('token', token, { 
           expires: 1,
           path: '/',
           sameSite: 'Lax'
         });
-        // 保存用户名，使用表单中的用户名
-        Cookies.set('username', values.username);
+        Cookies.set('username', username || values.username);
+        localStorage.setItem('user_id', user_id);
+        
+        // 存储权限信息
+        if (permissions) {
+          console.log('存储权限信息到localStorage');
+          localStorage.setItem('permissions', JSON.stringify(permissions));
+        } else {
+          console.log('没有权限信息可存储');
+        }
+        
+        // 存储角色信息
+        if (response.data.roles) {
+          console.log('存储角色信息到localStorage');
+          localStorage.setItem('roles', JSON.stringify(response.data.roles));
+        } else {
+          console.log('没有角色信息可存储');
+        }
+        
         message.success('登录成功');
         setTimeout(() => {
           navigate('/dashboard', { replace: true });
@@ -36,7 +60,7 @@ function Login() {
     } finally {
       setLoading(false);
     }
-  }; // 删除这里多余的分号
+  };
 
   return (
     <div className="login-container">

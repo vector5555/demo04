@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layout, Menu } from 'antd';
+import { Layout, Menu, Dropdown, Space, Avatar } from 'antd';
 import { Outlet, useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';  // 添加 Cookies 导入
 import {
@@ -9,6 +9,8 @@ import {
   LogoutOutlined,
   DatabaseOutlined, // 添加数据库图标
   ApiOutlined, // 添加API图标用于LLM配置
+  DownOutlined, // 添加下拉图标
+  KeyOutlined, // 添加权限图标
 } from '@ant-design/icons';
 
 const { Header, Content, Sider } = Layout;
@@ -17,6 +19,7 @@ const BasicLayout = () => {
   const navigate = useNavigate();
   const username = Cookies.get('username') || '未登录';  // 从 Cookies 获取用户名
 
+  // 菜单项保持不变
   const menuItems = [
     {
       key: 'dashboard',
@@ -77,15 +80,40 @@ const BasicLayout = () => {
     navigate('/login');
   };
 
+  // 用户下拉菜单项
+  const userMenuItems = [
+    {
+      key: 'permissions',
+      icon: <KeyOutlined />,
+      label: '我的权限',
+      onClick: () => navigate('/user/permissions')
+    },
+    {
+      type: 'divider'
+    },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: '退出登录',
+      onClick: handleLogout
+    }
+  ];
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ color: 'white', fontSize: '20px' }}>自然语言查询系统</div>
         <div style={{ display: 'flex', alignItems: 'center', color: 'white' }}>
-          <span style={{ marginRight: '20px' }}>当前用户: {username}</span>
-          <div onClick={handleLogout} style={{ cursor: 'pointer' }}>
-            <LogoutOutlined /> 退出
-          </div>
+          {/* 替换原来的用户信息显示为下拉菜单 */}
+          <Dropdown menu={{ items: userMenuItems }} trigger={['click']}>
+            <a onClick={e => e.preventDefault()} style={{ color: 'white', cursor: 'pointer' }}>
+              <Space>
+                <Avatar icon={<UserOutlined />} />
+                {username}
+                <DownOutlined />
+              </Space>
+            </a>
+          </Dropdown>
         </div>
       </Header>
       <Layout>

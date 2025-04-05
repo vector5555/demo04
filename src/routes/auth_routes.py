@@ -69,10 +69,14 @@ async def login(request: Request, db: Session = Depends(get_auth_db)):
         schemas = {}
         schema_builder = SchemaBuilder(db_url="mysql+pymysql://root:sa123@localhost:3306/air")
         
+        # 收集所有权限信息
+        all_permissions = []
+        
         for role_id in role_ids:
             permissions = db.query(RolePermission).filter(RolePermission.role_id == role_id).all()
             
             if permissions:
+                # 将SQLAlchemy对象转换为字典
                 perm_list = [{
                     "id": perm.id,
                     "db_name": perm.db_name,
@@ -82,19 +86,23 @@ async def login(request: Request, db: Session = Depends(get_auth_db)):
                     "field_info": perm.field_info
                 } for perm in permissions]
                 
+                # 添加到所有权限列表
+                all_permissions.extend(perm_list)
+                
                 schema = schema_builder.build_schema_for_role(perm_list)
                 if schema:
                     schemas[role_id] = schema
         
-        
-        # 将用户ID存储到session中 - 添加错误处理
+        # 将用户ID和权限信息存储到session中
         try:
             if 'session' in request.scope:
                 request.session["user_id"] = user.id
                 request.session["username"] = user.username
                 request.session["roles"] = roles
                 request.session["role_ids"] = role_ids
-                logger.info(f"用户 {username} 登录成功，信息已写入session")
+                # 添加权限信息到session
+                request.session["permissions"] = all_permissions
+                logger.info(f"用户 {username} 登录成功，信息和权限已写入session")
             else:
                 logger.warning("Session中间件未正确安装，无法访问session")
         except Exception as session_error:
@@ -107,7 +115,9 @@ async def login(request: Request, db: Session = Depends(get_auth_db)):
                 "user_id": user.id,
                 "username": user.username,
                 "roles": [{"id": role_id, "name": role_name} for role_id, role_name in zip(role_ids, roles)],
-                "schemas": schemas
+                "schemas": schemas,
+                # 在响应中也返回权限信息
+                "permissions": all_permissions
             }
         }
     except HTTPException:

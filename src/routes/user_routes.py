@@ -55,8 +55,9 @@ async def create_user(
         if db.query(User).filter(User.username == username).first():
             raise HTTPException(status_code=400, detail="用户名已存在")
         
-        # 创建新用户
-        hashed_password = generate_password_hash(password)
+        # 创建新用户，使用与验证一致的密码加密方法
+        from ..utils.auth import get_password_hash  # 导入与验证一致的加密方法
+        hashed_password = get_password_hash(password)  # 使用一致的加密方法
         user = User(username=username, password=hashed_password)
         db.add(user)
         db.commit()

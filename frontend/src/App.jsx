@@ -33,6 +33,7 @@ import RolePermissionList from './pages/admin/RolePermissionList';
 import DatabaseConfig from './pages/admin/DatabaseConfig';
 import LLMConfig from './pages/admin/LLMConfig'; // 导入LLM配置组件
 import PrivateRoute from './components/PrivateRoute';
+import UserPermissions from './pages/user/UserPermissions'; // 导入用户权限组件
 
 function App() {
   return (
@@ -50,6 +51,8 @@ function App() {
             <Route path="database-config" element={<DatabaseConfig />} />
             <Route path="llm-config" element={<LLMConfig />} /> {/* 添加LLM配置路由 */}
           </Route>
+          {/* 添加用户权限路由 */}
+          <Route path="user/permissions" element={<UserPermissions />} />
         </Route>
       </Routes>
     </BrowserRouter>
