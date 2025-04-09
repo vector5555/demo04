@@ -6,6 +6,7 @@ import Cookies from 'js-cookie';
 import axios from '../utils/axios';  // 使用自定义的 axios 实例
 import QueryInput from '../components/QueryInput';
 import MessageList from '../components/MessageList';
+import { handleSqlError } from '../utils/errorHandler';
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -99,13 +100,18 @@ function Dashboard() {
       }
       
     } catch (error) {
-      console.log(error);
+      console.error('查询错误:', error);
+      
+      // 使用错误处理工具处理SQL错误
+      const errorInfo = handleSqlError(error);
+      
       const errorMessage = {
         type: 'system',
         content: value,
         sql: '未能生成 SQL',
         result: [],
-        error: error || '查询失败，请重试',
+        error: errorInfo.errorMessage || '查询失败，请重试',
+        errorSuggestion: errorInfo.suggestion,
         timestamp: new Date().toLocaleTimeString(),
         rated: false
       };
@@ -115,6 +121,7 @@ function Dashboard() {
     }
   };
   
+  // 同样修改 handleExecuteSQL 函数
   const handleExecuteSQL = async () => {
     setLoading(true);
     try {
@@ -126,7 +133,7 @@ function Dashboard() {
       const systemMessage = {
         type: 'system',
         sql: currentSQL,
-        result: response.data.data || [],
+        result: response.data || [],
         error: null,
         timestamp: new Date().toLocaleTimeString(),
         rated: false,
@@ -137,7 +144,26 @@ function Dashboard() {
       setMessages(prev => [...prev, systemMessage]);
       setEditModalVisible(false);
     } catch (error) {
-      // ... 错误处理保持不变 ...
+      console.error('执行SQL错误:', error);
+      
+      // 使用错误处理工具处理SQL错误
+      const errorInfo = handleSqlError(error);
+      
+      const errorMessage = {
+        type: 'system',
+        sql: currentSQL,
+        result: [],
+        error: errorInfo.errorMessage || '执行SQL失败',
+        errorSuggestion: errorInfo.suggestion,
+        timestamp: new Date().toLocaleTimeString(),
+        rated: false,
+        isEdited: true,
+        editTime: new Date().toLocaleTimeString()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      setEditModalVisible(false);
+    } finally {
+      setLoading(false);
     }
   };
   

@@ -73,7 +73,14 @@ function MessageItem({ message, index, messages, onEdit, onRate }) {
       {message.error ? (
         <Alert
           message="执行错误"
-          description={message.error}
+          description={
+            <div>
+              <p>{typeof message.error === 'string' ? message.error : '查询执行失败'}</p>
+              {message.errorSuggestion && (
+                <p><strong>建议：</strong> {message.errorSuggestion}</p>
+              )}
+            </div>
+          }
           type="error"
           showIcon
         />
@@ -103,7 +110,7 @@ function MessageItem({ message, index, messages, onEdit, onRate }) {
                             <tr key={idx}>
                               <td className="index-column">{idx + 1}</td>
                               {Object.values(row).map((value, i) => (
-                                <td key={i}>{value}</td>
+                                <td key={i}>{value !== null && value !== undefined ? value : '-'}</td>
                               ))}
                             </tr>
                           ))}

@@ -5,6 +5,9 @@ from typing import Dict, List, Tuple, Optional, Any
 import sqlparse
 import re
 from sqlalchemy import text
+from ..utils.error_handler import AppError
+from ..database.models.error_models import ErrorType
+from fastapi import status
 
 class SQLValidator:
     """
@@ -212,6 +215,12 @@ class SQLValidator:
         # 打印原始表达式，帮助调试
         print(f"处理字段表达式: {field_expr}")
         
+        # 处理SQL关键词，如DISTINCT
+        if field_expr.upper().startswith('DISTINCT '):
+            # 移除DISTINCT关键词，保留实际字段名
+            field_expr = field_expr[9:].strip()
+            print(f"移除DISTINCT关键词后: {field_expr}")
+        
         # 处理聚合函数和CAST表达式
         field_name = field_expr
         
@@ -246,7 +255,9 @@ class SQLValidator:
         if simple_fields:
             # 过滤掉常见的SQL关键字和函数名
             keywords = ['select', 'from', 'where', 'group', 'order', 'by', 'having', 
-                       'avg', 'sum', 'count', 'min', 'max', 'cast', 'as', 'and', 'or']
+                       'avg', 'sum', 'count', 'min', 'max', 'cast', 'as', 'and', 'or',
+                       'distinct', 'all', 'union', 'intersect', 'except', 'join', 'inner',
+                       'outer', 'left', 'right', 'full', 'on', 'using', 'natural', 'cross']
             filtered_fields = [f for f in simple_fields if f.lower() not in keywords]
             if filtered_fields:
                 field_name = filtered_fields[0]
@@ -299,26 +310,103 @@ class SQLValidator:
         尝试修正SQL，添加缺失的过滤条件
         """
         try:
+            # 首先移除SQL末尾的分号，稍后再添加回来
+            sql_without_semicolon = sql.rstrip(';').strip()
+            
             # 检查SQL是否有WHERE子句
-            where_exists = re.search(r'\bWHERE\b', sql, re.IGNORECASE)
+            where_exists = re.search(r'\bWHERE\b', sql_without_semicolon, re.IGNORECASE)
+            modified_sql = sql_without_semicolon
             
             for table, condition in missing_conditions:
+                # 处理条件中的引号，确保不会出现双重引号
+                # 先移除所有引号，然后根据需要添加正确的引号
+                normalized_condition = self._normalize_condition(condition)
+                
                 if where_exists:
                     # 如果已有WHERE子句，添加AND条件
-                    sql = re.sub(r'(WHERE\s+.*?)(\s+(?:GROUP BY|ORDER BY|LIMIT|$))', 
-                                f'\\1 AND {condition}\\2', 
-                                sql, 
-                                flags=re.IGNORECASE | re.DOTALL)
-                    where_exists = True  # 确保下一个条件也使用AND
+                    modified_sql = re.sub(
+                        r'(WHERE\s+.*?)(\s+(?:GROUP BY|ORDER BY|LIMIT|$)|$)', 
+                        f'\\1 AND {normalized_condition}\\2', 
+                        modified_sql, 
+                        flags=re.IGNORECASE | re.DOTALL
+                    )
                 else:
                     # 如果没有WHERE子句，添加WHERE条件
-                    sql = re.sub(r'(FROM\s+.*?)(\s+(?:GROUP BY|ORDER BY|LIMIT|$))', 
-                                f'\\1 WHERE {condition}\\2', 
-                                sql, 
-                                flags=re.IGNORECASE | re.DOTALL)
+                    modified_sql = re.sub(
+                        r'(FROM\s+.*?)(\s+(?:GROUP BY|ORDER BY|LIMIT|$)|$)', 
+                        f'\\1 WHERE {normalized_condition}\\2', 
+                        modified_sql, 
+                        flags=re.IGNORECASE | re.DOTALL
+                    )
                     where_exists = True  # 下一个条件需要使用AND
             
-            return sql
+            # 检查SQL是否真的被修改了
+            if modified_sql == sql_without_semicolon:
+                print("警告：应用过滤条件后SQL没有变化")
+                # 尝试更简单的方法添加条件
+                if missing_conditions:
+                    if where_exists:
+                        # 在WHERE子句后添加AND条件
+                        for table, condition in missing_conditions:
+                            modified_sql = modified_sql.replace("WHERE ", f"WHERE {condition} AND ")
+                    else:
+                        # 在FROM子句后添加WHERE条件
+                        from_clause_end = modified_sql.upper().find("FROM ") + 5
+                        table_end = modified_sql.find(" ", from_clause_end)
+                        if table_end > 0:
+                            condition_str = " WHERE " + " AND ".join([cond for _, cond in missing_conditions])
+                            modified_sql = modified_sql[:table_end] + condition_str + modified_sql[table_end:]
+                        else:
+                            # 如果找不到空格，说明FROM后面直接是表名，没有其他条件
+                            condition_str = " WHERE " + " AND ".join([cond for _, cond in missing_conditions])
+                            modified_sql = modified_sql + condition_str
+            
+            # 添加回分号（如果原SQL有分号）
+            if sql.rstrip().endswith(';'):
+                modified_sql = modified_sql + ';'
+            
+            print(f"原始SQL: {sql}")
+            print(f"修改后SQL: {modified_sql}")
+            
+            return modified_sql
         except Exception as e:
             print(f"应用过滤条件时出错: {str(e)}")
             return None
+    
+    def _normalize_condition(self, condition: str) -> str:
+        """
+        规范化SQL条件，处理引号问题
+        """
+        try:
+            print(f"规范化前的条件: {condition}")
+            
+            # 使用正则表达式匹配条件中的字段名、操作符和值
+            # 例如：KZJB = '国控' 或 KZJB= '国控'（处理中英文引号）
+            pattern = r'([a-zA-Z0-9_\.]+)\s*([=<>!]+)\s*(.*?)$'
+            match = re.match(pattern, condition)
+            
+            if match:
+                field, operator, value = match.groups()
+                value = value.strip()
+                
+                # 移除值中的所有引号（包括中文引号）
+                clean_value = value
+                for quote in ["'", '"', "'", "'", """, """]:  # 包含中英文引号
+                    clean_value = clean_value.replace(quote, "")
+                clean_value = clean_value.strip()
+                
+                # 如果值不是数字，添加英文单引号
+                if not clean_value.isdigit() and clean_value.lower() not in ['null', 'true', 'false']:
+                    normalized = f"{field} {operator} '{clean_value}'"
+                else:
+                    normalized = f"{field} {operator} {clean_value}"
+                
+                print(f"规范化后的条件: {normalized}")
+                return normalized
+            
+            # 如果无法解析条件，返回原始条件
+            print(f"无法解析条件，返回原始条件: {condition}")
+            return condition
+        except Exception as e:
+            print(f"规范化条件时出错: {str(e)}")
+            return condition

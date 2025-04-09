@@ -8,6 +8,13 @@ from ..protocol.query_protocol import QueryRequest, QueryResponse
 from ..utils.auth import verify_token, get_current_user_id  # 添加get_current_user_id导入
 from ..model.query_model import QueryModel
 from ..config.auth_db import get_auth_db  # 添加get_auth_db导入
+from fastapi import APIRouter, Depends, status
+from sqlalchemy.exc import SQLAlchemyError
+from ..utils.error_handler import AppError
+from ..database.models.error_models import ErrorType
+# from ..validator.sql_validator import validate_sql
+# from ..database.session import get_db
+# from ..models.query_models import QueryRequest, QueryResponse
 
 router = APIRouter(tags=["查询"])
 

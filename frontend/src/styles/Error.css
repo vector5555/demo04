@@ -1,0 +1,47 @@
+/* 错误提示样式 */
+.error-container {
+  margin: 16px 0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.error-title {
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.error-message {
+  margin-bottom: 8px;
+}
+
+.error-suggestion {
+  background-color: #fffbe6;
+  padding: 8px 12px;
+  border-left: 3px solid #faad14;
+  margin-top: 8px;
+}
+
+/* 不同类型错误的样式 */
+.error-auth {
+  border-left: 3px solid #ff4d4f;
+}
+
+.error-permission {
+  border-left: 3px solid #faad14;
+}
+
+.error-sql {
+  border-left: 3px solid #1890ff;
+}
+
+.error-network {
+  border-left: 3px solid #722ed1;
+}
+
+.error-server {
+  border-left: 3px solid #ff7a45;
+}
+
+.error-validation {
+  border-left: 3px solid #13c2c2;
+}

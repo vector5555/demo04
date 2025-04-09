@@ -275,7 +275,18 @@ class SchemaManager:
                         if table_name in allowed_fields and col['name'] not in allowed_fields[table_name]:
                             continue
                             
-                        table_info += f"  - {col['name']}: {col['type']}"
+                        # 获取列的注释信息
+                        try:
+                            # if col['comment']:
+                            comment_text = col['comment']
+                            if(comment_text==None):
+                                comment_text=""
+                            # comment_text = f" - {comment['text']}" if comment and comment.get('text') else ""
+                        except Exception as comment_error:
+                            print(f"获取列 {table_name}.{col['name']} 的注释失败: {str(comment_error)}")
+                            comment_text = ""
+                            
+                        table_info += f"  - {col['name']}: {col['type']}{comment_text}"
                         # 添加安全检查，确保primary_key存在且包含constrained_columns
                         if primary_key and 'constrained_columns' in primary_key and primary_key['constrained_columns']:
                             if col['name'] in primary_key['constrained_columns']:
