@@ -24,7 +24,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import BasicLayout from './layouts/BasicLayout';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
+import Dashboard from './pages/dashboard';
 import Users from './pages/admin/Users';
 import Roles from './pages/admin/Roles';
 import RoleUser from './pages/admin/RoleUser';
