@@ -1,6 +1,6 @@
 {
   "api_url": "https://api.deepseek.com/v1/chat/completions",
-  "api_key": "sk-073ca480b9184dcf9e1be31f805a356b",
+  "api_key": "",
   "model_name": "deepseek-chat",
   "temperature": 0.0,
   "max_tokens": 2000,
